@@ -30,7 +30,6 @@ export default function App() {
   const [whateverInput, setWhateverInput] = useState();
   const [isDialogVisible, setIsDialogVisible] = useState(false);
   const [isManyHoursVisible, setIsManyHoursVisible] = useState(false);
-  const [currentlyChanged, setCurrentlyChanged] = useState("qwertyasdfzxcv");
 
   const [expoPushToken, setExpoPushToken] = useState('');
   const [notification, setNotification] = useState(false);
@@ -60,16 +59,13 @@ export default function App() {
   }
 
   const addHourData = async (inputText) => {
-    console.log(currentlyChanged);
     if(inputText !== "nope"){
       if(isNumber(inputText) == true) {
-        await schedulePushNotification(parseInt(inputText));
+        await schedulePushNotification(parseInt(inputText), listOfChores[0]);
       }
     } else {
       console.log('nope');
     }
-    await setCurrentlyChanged('qwertyasdfzxcv');
-    console.log(currentlyChanged);
     setIsManyHoursVisible(false);
   }
 
@@ -78,7 +74,6 @@ export default function App() {
       let value = await AsyncStorage.getItem('arrayOfMessages');
       let data = JSON.parse(value);
       setListOfChores(data);
-      console.log(data);
     }
     fetchData();
   }, [yesNo]);
@@ -89,10 +84,13 @@ export default function App() {
 
   const addTheData = async (inputText) => {
     let currentInput = listOfChores;
+    if (currentInput == null){
+      currentInput = [];
+    }
     currentInput.push(inputText);
     //console.log(typeof currentInput);
     //console.log(JSON.stringify(currentInput));
-    await AsyncStorage.setItem('arrayOfMessages', JSON.stringify(currentInput));
+    await AsyncStorage.setItem('arrayOfMessages', JSON.stringify(currentInput.reverse()));
     let yes_or_no = yesNo;
     if (yes_or_no === 'yes'){
       setYesNo('no');
@@ -102,9 +100,6 @@ export default function App() {
     //console.log(currentInput);
     //console.log(currentInput.length);
     setIsDialogVisible(false);
-    console.log(currentlyChanged);
-    await setCurrentlyChanged(inputText);
-    console.log(currentlyChanged);
     setIsManyHoursVisible(true);
     // alert(new Date().addHours(4));
   }
@@ -138,6 +133,32 @@ export default function App() {
       </View>
     );
   }
+
+  const renderAllItems = () => {
+    if(listOfChores.length != 0){
+      return (<FlatList 
+        style={styles.showList}
+        data={listOfChores}
+        renderItem={renderItemComponent}
+      />);
+    } else {
+      return (
+        <View style={{
+          marginTop: 50,
+          width: '95%',
+          borderRadius: 25,
+          backgroundColor: '#b950d4',
+          padding: 15,
+          alignItems: 'center',
+        }}>
+          <Text style={{
+            fontWeight: '700',
+            fontSize: 23
+          }}>No Tasks To Do!</Text>
+        </View>
+      );
+    }
+  }
  
   return (
     <View style={styles.container}>
@@ -156,11 +177,12 @@ export default function App() {
             submitInput={(inputText) => {addHourData(inputText)}}
             closeDialog={ () => {addHourData("nope")}}>
       </DialogInput>
-      <FlatList 
+      {/* <FlatList 
         style={styles.showList}
         data={listOfChores}
         renderItem={renderItemComponent}
-      />
+      /> */}
+      {renderAllItems()}
       <Text style={styles.plus} onPress={pressPlus}>+</Text>
       <StatusBar style="auto" />
     </View>
@@ -196,13 +218,15 @@ const styles = StyleSheet.create({
     padding: 10,
     borderBottomColor: 'black',
     borderBottomWidth: 1,
-    borderRadius: 25
+    borderRadius: 25,
+    alignItems: 'center',
   } 
 });
 
 
-async function schedulePushNotification(numHours) {
+async function schedulePushNotification(numHours, firstItem) {
   let injectHour;
+  let itemToInject = firstItem;
   if(numHours == 0){
     injectHour = 1;
   } else {
@@ -211,7 +235,7 @@ async function schedulePushNotification(numHours) {
   await Notifications.scheduleNotificationAsync({
     content: {
       title: "Reminder",
-      body: `Go do whatever!!!`,
+      body: `Go do "${itemToInject}"!!!`,
       data: { data: 'goes here' },
     },
     trigger: { seconds: injectHour },
